@@ -1,218 +1,380 @@
-# Assignment 2 – Secure Distributed Communication Prototype
+# Secure Distributed Communication Prototype
 
-## Overview
-
-This project implements a **secure distributed communication prototype** that simulates communication between a **device** and a **controller** over an unreliable network.
-
-The objective is to evaluate how different security mechanisms affect **secure availability, reliability, and efficiency** in distributed systems.
-
-The prototype models common distributed system challenges such as:
-
-- Packet loss
-- Network latency
-- Message tampering
-- Replay attacks
-- Retries and acknowledgements
-
-The system is implemented in Python and provides experimental results used to evaluate the proposed hypothesis.
+**Author:** Sultan Alkaabi
 
 ---
 
-# Hypothesis
+# 1. Research Question and Hypothesis
 
-The hypothesis investigated in this assignment is:
+This project investigates the relationship between **security mechanisms and system availability within a distributed communication environment**. Distributed systems frequently operate over unreliable networks where packet loss, latency variation, and malicious manipulation may occur. As a result, security mechanisms must be designed alongside reliability mechanisms to ensure that system state progresses correctly.
 
-> Under unreliable network conditions and active attacks (tampering or replay), enabling integrity protection and anti-replay mechanisms improves secure availability.  
-> Additionally, enabling batching and adaptive backoff improves efficiency without reducing secure availability.
+The research question explored in this project is:
 
-The experiments evaluate how security and reliability mechanisms interact in a distributed system.
+> **Does the integration of message authentication and replay protection improve secure availability in a distributed system, and can reliability mechanisms reduce the performance overhead introduced by security controls?**
 
----
+Based on the **ABCDE security analysis conducted in Part 1**, the following hypothesis was formulated:
 
-# System Architecture
+> In a lossy distributed system, the integration of **HMAC-based message authentication** and **nonce-based replay protection** improves secure availability compared to integrity-only mechanisms. Additionally, reliability mechanisms such as **exponential backoff** and **message batching** reduce the communication overhead and energy cost introduced by these security controls.
 
-The system contains three main components.
+Secure availability in this study is defined as:
 
-## Device (Client)
 
-The device generates telemetry data and sends messages to the controller.
-
-Main responsibilities:
-
-- Generate telemetry data
-- Apply security mechanisms (HMAC, nonce)
-- Send messages over the network
-- Handle acknowledgements
-- Retry messages if acknowledgements are not received
+This metric measures the proportion of **valid messages successfully delivered and accepted by the controller**.
 
 ---
 
-## Controller (Hub)
+# 2. System Model Specification
 
-The controller receives messages from the device and verifies them.
+The prototype models a simplified distributed telemetry system consisting of **three interacting components**.
 
-Security responsibilities include:
+## Device (Client Node)
 
-- Validating HMAC authentication
-- Detecting replay attacks using nonce tracking
-- Rejecting invalid packets
-- Sending acknowledgements
+The device represents a **resource-constrained edge device** responsible for generating telemetry data and sending messages to the controller.
 
----
+The device creates packets containing:
 
-## Network Simulation
-
-The network simulates real distributed system behaviour by introducing:
-
-- Packet loss
-- Variable latency
-- Message tampering
-- Replay attacks
-
-This allows the prototype to test system security under realistic conditions.
+- Message identifiers  
+- Payload data  
+- Nonces for replay protection  
+- Message authentication codes (MAC)
 
 ---
 
-# Security Mechanisms
+## Controller (Central Hub)
 
-## HMAC Authentication
+The controller receives packets transmitted by the device and verifies their **authenticity and freshness**.
 
-Messages are protected using **HMAC-SHA256** to ensure:
+The controller is responsible for:
 
-- Message integrity
-- Message authenticity
-
-If a message is modified during transmission, the controller detects the invalid MAC and rejects the packet.
-
----
-
-## Nonce-Based Replay Protection
-
-Each message contains a unique **nonce value**.
-
-The controller maintains a sliding window of recently used nonces to detect replay attempts.  
-If a previously used nonce appears again, the packet is rejected.
+- Validating packet integrity  
+- Detecting replay attacks  
+- Accepting or rejecting packets  
+- Sending acknowledgements for valid packets  
 
 ---
 
-## Metrics and Monitoring
+## Unreliable Network Layer
 
-The prototype records metrics used for evaluation:
+All communication occurs through a **simulated unreliable network environment**.
 
-- Messages sent
-- Unique messages accepted
-- Replay attacks detected
-- Invalid MAC detections
-- Latency
-- Retries and timeouts
-- Transmission count
-- Energy usage
+The simulation includes:
 
-These metrics allow the experiments to measure both **security effectiveness** and **system performance**.
+- Packet loss  
+- Variable network latency  
+- Message tampering attacks  
+- Replay attacks  
 
----
+### Network Parameters
 
-# Distributed System Challenges
+- Packet loss probability: **15%**
+- Network latency range: **40–220 ms**
+- Replay attack probability: **20%**
+- Tampering attack probability: **20%**
 
-The simulation models several real-world distributed system problems:
-
-- Unreliable communication channels
-- Packet loss
-- Message duplication
-- Latency variation
-- Retry storms
-
-The prototype includes mechanisms to mitigate these issues, such as acknowledgement-based retransmission and adaptive retry strategies.
+These parameters simulate realistic distributed system behaviour where communication cannot be assumed to be reliable or secure.
 
 ---
 
-# Experiments
+# 3. Security Vulnerabilities and Mitigations
 
-Four experiments were conducted to evaluate the hypothesis.
+Several vulnerabilities identified in the **Attack–Defence Tree analysis (Part 1)** are mitigated in this prototype.
 
-## E1 – Baseline (No Security)
+## Tampering Attacks
 
-Configuration:
+Attackers may modify packet contents during transmission.
 
-- No authentication
-- No replay protection
-- No efficiency mechanisms
+**Mitigation**
 
-Purpose:
-
-Establish baseline behaviour of the system.
+- HMAC-SHA256 authentication  
+- Controller verifies message integrity  
 
 ---
 
-## E2 – HMAC Authentication
+## Replay Attacks
 
-Configuration:
+Attackers may capture and resend previously transmitted packets.
 
-- HMAC authentication enabled
-- Tampering detection
-- Replay protection disabled
+**Mitigation**
 
-Purpose:
+- Nonce-based replay detection  
+- Controller maintains a sliding window of seen nonces  
 
-Evaluate the impact of integrity protection.
-
----
-
-## E3 – HMAC + Anti-Replay + Adaptive Backoff
-
-Configuration:
-
-- HMAC authentication enabled
-- Nonce-based replay protection enabled
-- Adaptive retry backoff enabled
-
-Purpose:
-
-Improve security and reliability.
+Duplicate packets are rejected.
 
 ---
 
-## E4 – Full System (Security + Efficiency)
+## Packet Loss and Network Unreliability
 
-Configuration:
+Distributed systems must tolerate unreliable communication.
 
-- HMAC authentication
-- Replay protection
-- Adaptive retry backoff
-- Message batching
+**Mitigation**
 
-Purpose:
-
-Evaluate security and efficiency together.
+- Acknowledgement-based retransmission  
 
 ---
 
-# Results Summary
+## Congestion and Retry Storms
 
-The experiments produced the following observations:
+Repeated retransmissions may increase network congestion.
 
-- HMAC authentication successfully detects tampered packets.
-- Replay attacks are prevented only when nonce-based replay protection is enabled.
-- Adaptive backoff reduces retry storms and improves network stability.
-- Batching reduces total transmissions and energy consumption.
+**Mitigation**
 
-The final configuration (**E4**) achieved the best balance between **security, availability, and efficiency**.
+- Adaptive exponential backoff  
+- Retry delays increase after failures  
 
 ---
 
-# Running the Prototype
+## Energy Consumption
+
+Repeated transmissions increase power usage in resource-constrained devices.
+
+**Mitigation**
+
+- Message batching  
+
+Multiple telemetry messages are sent together to reduce transmission overhead.
+
+---
+
+# 4. Prototype Implementation
+
+The prototype was implemented in **Python using an object-oriented design**.
+
+The system contains several classes modelling the distributed system.
+
+---
+
+## Device Class
+
+Responsibilities:
+
+- Generate telemetry data  
+- Create packets with message identifiers and nonces  
+- Apply HMAC authentication  
+- Send packets through the simulated network  
+- Wait for acknowledgements  
+- Retry transmissions  
+- Apply exponential backoff  
+- Track energy consumption  
+- Support batching  
+
+---
+
+## Controller Class
+
+Responsibilities:
+
+- Receive packets  
+- Verify HMAC authentication  
+- Detect replay attacks  
+- Accept or reject packets  
+- Send acknowledgements  
+- Record experiment metrics  
+
+---
+
+## Unreliable Network Class
+
+Simulates distributed network behaviour including:
+
+- Random packet loss  
+- Variable latency  
+- Replay attacks  
+- Payload tampering  
+
+This enables controlled evaluation of **security and reliability mechanisms**.
+
+---
+
+# 5. Simulation of Distributed System Challenges
+
+The prototype demonstrates common distributed system problems:
+
+### Network Latency
+Messages experience unpredictable delays due to network conditions.
+
+### Packet Loss
+Messages may be dropped during transmission.
+
+### Message Replay
+Previously transmitted packets may be resent by attackers.
+
+### Payload Tampering
+Attackers may modify packet contents during transmission.
+
+These behaviours are simulated to evaluate how the system responds to unreliable and adversarial conditions.
+
+---
+
+# 6. Experiments Conducted
+
+Four experiments were used to evaluate the hypothesis.
+
+---
+
+## Experiment 1 — Baseline (No Security)
+
+Features:
+
+- No HMAC authentication  
+- No replay protection  
+- No adaptive backoff  
+- No batching  
+
+This configuration represents a distributed system **without security mechanisms**.
+
+---
+
+## Experiment 2 — HMAC Integrity Protection
+
+Features:
+
+- HMAC authentication  
+- No replay protection  
+
+Evaluates whether **integrity protection alone improves system behaviour**.
+
+---
+
+## Experiment 3 — HMAC + Anti-Replay + Backoff
+
+Features:
+
+- HMAC authentication  
+- Nonce-based replay detection  
+- Adaptive exponential backoff  
+
+Evaluates how replay protection improves **secure availability**.
+
+---
+
+## Experiment 4 — Full Mitigation
+
+Features:
+
+- HMAC authentication  
+- Anti-replay protection  
+- Adaptive backoff  
+- Message batching  
+
+Evaluates whether **efficiency mechanisms offset security overhead**.
+
+---
+
+# 7. Metrics Recorded
+
+Several metrics are recorded during the experiments.
+
+### Sent Messages
+Total messages generated by the device.
+
+### Accepted Unique Messages
+Valid messages successfully accepted by the controller.
+
+### Rejected Messages
+Packets rejected due to invalid MAC or replay detection.
+
+### Secure Availability
+
+
+### Latency
+Average time required for a message to travel from the device to the controller and receive acknowledgement.
+
+### Retries and Timeouts
+Indicate how frequently retransmissions occur due to packet loss.
+
+### Energy Cost Units
+An abstract representation of energy consumption based on transmissions and cryptographic operations.
+
+### Transmissions per Successful Message
+Indicates communication efficiency.
+
+---
+
+# 8. Testing and Demonstration
+
+Automated tests verify correct system behaviour.
+
+### Tampering Detection Test
+
+Tampered packets must fail HMAC verification and be rejected.
+
+### Replay Detection Test
+
+Replay attacks must be detected and rejected by the nonce-based replay protection mechanism.
+
+### Reliability Testing
+
+Simulated packet loss verifies that retransmission logic and backoff mechanisms operate correctly.
+
+Console outputs demonstrate:
+
+- replay detections  
+- invalid MAC detections  
+- retries and timeouts  
+
+These outputs provide evidence that the security mechanisms operate correctly.
+
+---
+
+# 9. Structure and Code Organisation
+
+The code is organised using **object-oriented programming principles** to improve clarity and maintainability.
+
+Each system component is implemented as an independent class:
+
+- Device  
+- Controller  
+- Network  
+
+This separation improves:
+
+- readability  
+- modularity  
+- extensibility  
+
+Extensive comments are included throughout the code explaining the operation of security mechanisms and the implementation of experiments.
+
+---
+
+# 10. Limitations
+
+Several limitations exist in the prototype:
+
+- The system assumes the use of **pre-shared symmetric keys**
+- No **key management protocol** is implemented
+- **Confidentiality (encryption)** is not implemented
+- The attacker model is **probabilistic rather than adaptive**
+- Energy consumption is **abstract rather than hardware-based**
+
+Despite these limitations, the prototype provides a controlled environment for analysing the interaction between **security mechanisms and distributed system availability**.
+
+---
+
+# 11. Conclusion
+
+The experimental results support the proposed hypothesis.
+
+Key findings:
+
+- HMAC authentication detects tampered packets.  
+- Nonce-based replay protection prevents duplicate message processing.  
+- Adaptive backoff reduces network congestion.  
+- Message batching significantly reduces communication overhead.  
+
+These results demonstrate that **security and reliability must be co-designed in distributed systems** in order to achieve both secure and efficient communication.
+
+---
+
+# 12. How to Run the Program
 
 ## Requirements
 
-Python 3.9 or newer.
-
-No additional libraries are required.
-
----
+- Python **3.9 or higher**
 
 ## Run the program
 
-Execute the following command:
-
 ```bash
 python ABCDEType.py
+
+
